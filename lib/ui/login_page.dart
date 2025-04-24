@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:myproject/ui/user_store.dart';
 import 'moisture_page.dart';
 import 'register_page.dart';
+import 'forgot_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,14 +13,11 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final userCtrl = TextEditingController();
   final passCtrl = TextEditingController();
-  bool _obscure = true;
+  bool obscure = true;
 
   Future<void> _login() async {
-    final p = await SharedPreferences.getInstance();
-    final savedUser = p.getString('username') ?? '';
-    final savedPass = p.getString('password') ?? '';
-
-    if (userCtrl.text == savedUser && passCtrl.text == savedPass) {
+    final u = await UserStore.find(userCtrl.text.trim());
+    if (u != null && u.isNotEmpty && u['password'] == passCtrl.text) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MoisturePage()),
@@ -37,10 +35,9 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // 📸 พื้นหลังเบลอ
           Positioned.fill(
             child: Image.asset(
-              'assets/bg_leaf.jpg',            // เตรียมภาพใน assets
+              'assets/bg_leaf.jpg',
               fit: BoxFit.cover,
               color: Colors.black.withOpacity(0.3),
               colorBlendMode: BlendMode.darken,
@@ -52,16 +49,19 @@ class _LoginPageState extends State<LoginPage> {
                 elevation: 10,
                 margin: const EdgeInsets.symmetric(horizontal: 32),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Welcome',
-                          style: theme.textTheme.headlineMedium
-                              ?.copyWith(color: theme.primaryColor)),
+                      Text(
+                        'Welcome',
+                        style: theme.textTheme.headlineMedium
+                            ?.copyWith(color: theme.primaryColor),
+                      ),
                       const SizedBox(height: 24),
                       TextField(
                         controller: userCtrl,
@@ -74,15 +74,16 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: passCtrl,
-                        obscureText: _obscure,
+                        obscureText: obscure,
                         decoration: InputDecoration(
                           prefixIcon: const Icon(Icons.lock),
                           labelText: 'Password',
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
                             icon: Icon(
-                                _obscure ? Icons.visibility : Icons.visibility_off),
-                            onPressed: () => setState(() => _obscure = !_obscure),
+                                obscure ? Icons.visibility : Icons.visibility_off),
+                            onPressed: () =>
+                                setState(() => obscure = !obscure),
                           ),
                         ),
                       ),
@@ -96,16 +97,31 @@ class _LoginPageState extends State<LoginPage> {
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('LOGIN', style: TextStyle(fontSize: 16)),
+                          child: const Text('LOGIN',
+                              style: TextStyle(fontSize: 16)),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const RegisterPage()),
-                        ),
-                        child: const Text('Create new account'),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const RegisterPage()),
+                            ),
+                            child: const Text('Create new account'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const ForgotPage()),
+                            ),
+                            child: const Text('Forgot password?'),
+                          ),
+                        ],
                       )
                     ],
                   ),

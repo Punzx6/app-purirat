@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:myproject/ui/user_store.dart';
 import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
-
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
@@ -12,32 +11,40 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final formKey = GlobalKey<FormState>();
 
-  final fullNameCtrl = TextEditingController();
+  final fullCtrl  = TextEditingController();
   final emailCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
-  final userCtrl = TextEditingController();
-  final passCtrl = TextEditingController();
+  final userCtrl  = TextEditingController();
+  final passCtrl  = TextEditingController();
   bool obscure = true;
 
-  Future<void> _save() async {
+  Future<void> _register() async {
     if (!formKey.currentState!.validate()) return;
 
-    final p = await SharedPreferences.getInstance();
-    await p.setString('fullName', fullNameCtrl.text.trim());
-    await p.setString('email', emailCtrl.text.trim());
-    await p.setString('phone', phoneCtrl.text.trim());
-    await p.setString('username', userCtrl.text.trim());
-    await p.setString('password', passCtrl.text);
+    // ตรวจ username ซ้ำ
+    final exists = await UserStore.find(userCtrl.text.trim());
+    if (exists != null && exists.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Username นี้ถูกใช้แล้ว')),
+      );
+      return;
+    }
+
+    // เก็บลง UserStore (SharedPreferences)
+    await UserStore.add({
+      'fullName':  fullCtrl.text.trim(),
+      'email':     emailCtrl.text.trim(),
+      'phone':     phoneCtrl.text.trim(),
+      'username':  userCtrl.text.trim(),
+      'password':  passCtrl.text,
+    });
 
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('สมัครสมาชิกสำเร็จ')));
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('สมัครสมาชิกสำเร็จ')),
     );
+    Navigator.pushReplacement(
+      context, MaterialPageRoute(builder: (_) => const LoginPage()));
   }
 
   @override
@@ -46,6 +53,7 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       body: Stack(
         children: [
+          // พื้นหลังจาง
           Positioned.fill(
             child: Image.asset(
               'assets/bg_leaf.jpg',
@@ -60,67 +68,30 @@ class _RegisterPageState extends State<RegisterPage> {
                 elevation: 10,
                 margin: const EdgeInsets.symmetric(horizontal: 24),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                    borderRadius: BorderRadius.circular(16)),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 28,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
                   child: Form(
                     key: formKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'Create Account',
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: theme.primaryColor,
-                          ),
-                        ),
+                        Text('Create Account',
+                            style: theme.textTheme.headlineSmall
+                                ?.copyWith(color: theme.primaryColor)),
                         const SizedBox(height: 20),
-                        _buildText(
-                          fullNameCtrl,
-                          'Full name',
-                          icon: Icons.person,
-                          validator: (v) {
-                            if (v!.isEmpty) return 'กรุณากรอกชื่อ';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        _buildText(
-                          emailCtrl,
-                          'Email',
-                          icon: Icons.email,
-                          keyboard: TextInputType.emailAddress,
-                          validator:
-                              (v) =>
-                                  v!.contains('@') ? null : 'อีเมลไม่ถูกต้อง',
-                        ),
-                        const SizedBox(height: 12),
-                        _buildText(
-                          phoneCtrl,
-                          'Phone',
-                          icon: Icons.phone,
-                          keyboard: TextInputType.phone,
-                          validator:
-                              (v) =>
-                                  v!.length < 8
-                                      ? 'เบอร์ไม่น้อยกว่า 8 ตัว'
-                                      : null,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildText(
-                          userCtrl,
-                          'Username',
-                          icon: Icons.account_circle,
-                          validator: (v) {
-                            if (v!.isEmpty) return 'ตั้งชื่อผู้ใช้';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
+                        _field(fullCtrl, 'Full name', Icons.person),
+                        _field(emailCtrl, 'Email', Icons.email,
+                            keyType: TextInputType.emailAddress,
+                            validator: (v) =>
+                                v!.contains('@') ? null : 'อีเมลไม่ถูกต้อง'),
+                        _field(phoneCtrl, 'Phone', Icons.phone,
+                            keyType: TextInputType.phone,
+                            validator: (v) =>
+                                v!.length < 8 ? 'เบอร์ไม่น้อยกว่า 8 ตัว' : null),
+                        _field(userCtrl, 'Username', Icons.account_circle),
+                        // Password
                         TextFormField(
                           controller: passCtrl,
                           obscureText: obscure,
@@ -130,32 +101,27 @@ class _RegisterPageState extends State<RegisterPage> {
                             border: const OutlineInputBorder(),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                obscure
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                              ),
-                              onPressed:
-                                  () => setState(() => obscure = !obscure),
+                                  obscure ? Icons.visibility : Icons.visibility_off),
+                              onPressed: () =>
+                                  setState(() => obscure = !obscure),
                             ),
                           ),
-                          validator:
-                              (v) => v!.length < 4 ? 'อย่างน้อย 4 ตัว' : null,
+                          validator: (v) =>
+                              v!.length < 4 ? 'อย่างน้อย 4 ตัว' : null,
                         ),
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _save,
+                            onPressed: _register,
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text(
-                              'REGISTER',
-                              style: TextStyle(fontSize: 16),
-                            ),
+                            child: const Text('REGISTER',
+                                style: TextStyle(fontSize: 16)),
                           ),
                         ),
                         TextButton(
@@ -174,20 +140,22 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _buildText(
-    TextEditingController c,
-    String label, {
-    IconData? icon,
-    TextInputType keyboard = TextInputType.text,
-    String? Function(String?)? validator,
-  }) => TextFormField(
-    controller: c,
-    decoration: InputDecoration(
-      prefixIcon: icon != null ? Icon(icon) : null,
-      labelText: label,
-      border: const OutlineInputBorder(),
-    ),
-    keyboardType: keyboard,
-    validator: validator,
-  );
+  // ----- helper widget -------
+  Widget _field(TextEditingController c, String label, IconData ic,
+      {TextInputType keyType = TextInputType.text,
+      String? Function(String?)? validator}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: c,
+        decoration: InputDecoration(
+          prefixIcon: Icon(ic),
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        keyboardType: keyType,
+        validator: validator ?? (v) => v!.isEmpty ? 'กรอก $label' : null,
+      ),
+    );
+  }
 }
