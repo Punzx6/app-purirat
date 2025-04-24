@@ -1,0 +1,29 @@
+name: myproject
+description: Temp & Humidity monitor (MQTT + local history)
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.7.2 <4.0.0'     # กำหนดช่วง Dart SDK ชัดเจน
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ‑‑– ฟังก์ชันแอป –‑‑
+  shared_preferences: ^2.2.2      # เก็บชื่อผู้ใช้+ประวัติในเครื่อง
+  mqtt_client:      ^10.0.0       # เชื่อม MQTT (mqtt.eclipseprojects.io)
+  fl_chart:         ^0.63.0       # กราฟเส้น
+  intl:             ^0.18.1       # จัดรูปเวลาหรือ format ค่า
+  cupertino_icons:  ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  
+assets:
+  - assets/bg_leaf.jpg
